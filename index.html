@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="/style/style.css">
+    <title>Basic Chat</title>
+</head>
+<body>
+    <h1>Chat</h1>
+    <div id="app">
+        <div v-if="state == 0">
+            <h1>Welcome, please choose a username</h1>
+            <form @submit.prevent="setUsername" action="">
+                <input type="text" placeholder="Type a username" v-model="username">
+                <input type="submit" value="Join">
+            </form>
+            <button style="margin-top: 20px;" @click="continueAsAnonymous">Join as Guest</button>
+        </div>
+        <div v-else>
+            <h2>My username is : <strong>{{ displayUsername }}</strong></h2>
+            <ul id="chatbox">
+                <li v-for="(message,index) in messages" 
+                    :key="index"
+                > 
+                <p>
+                    <strong>{{ message.username }} : </strong> 
+                    <span v-html="message.message"></span>
+                </p>
+                </li>
+            </ul>
+       
+            <form @submit.prevent="sendMessage" action="">
+                <input type="text" placeholder="Message..." v-model="message">
+                <input type="submit" value="Send">
+            </form>
+        </div>
+    </div>
+
+    <!-- development version, includes helpful console warnings -->
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+var socket = null;
+var app = new Vue({
+    el : '#app',
+    data(){
+        return{
+            message : '',
+            messages : [],
+            state : 0,
+            username : '',
+            displayUsername : '',
+        }
+    },
+    methods: {
+        sendMessage(){
+            socket.emit('message', this.message);
+            this.message = '';
+        },
+        continueAsAnonymous(){
+            socket.emit('join', null);
+            this.state = 1;
+        },
+        setUsername(){
+            socket.emit('join', this.username);
+            this.username = '';
+            this.state = 1;
+        }
+    },
+    created(){
+        socket = io();
+    },
+    mounted() {
+        socket.on('message', (msg) => {
+            this.messages.push(msg);
+            this.$nextTick(() => {
+                var messageBox = document.getElementById('chatbox');
+                messageBox.scrollTop = messageBox.scrollHeight;
+            });
+        });
+
+        socket.on('user', (username) => {
+            this.displayUsername = username;
+           
+        });
+
+        socket.on('user left',(user) => {
+            this.messages.push(user);
+        });
+    },
+})
+</script>
+</body>
+</html>
